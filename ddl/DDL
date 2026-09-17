@@ -1,0 +1,271 @@
+CREATE DATABASE veterinaria_patita;
+USE veterinaria_patita;
+ 
+-- ====================================================================
+-- TABLAS INDEPENDIENTES (Sin llaves foráneas)
+-- ====================================================================
+ 
+-- 1. Tabla: roles
+CREATE TABLE `roles` (
+  `ID_Rol` int NOT NULL AUTO_INCREMENT,
+  `Nombre_Rol` varchar(50) NOT NULL,
+  PRIMARY KEY (`ID_Rol`),
+  UNIQUE KEY `Nombre_Rol` (`Nombre_Rol`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- 2. Tabla: terceros (Incluye Deuda_Total)
+CREATE TABLE `terceros` (
+  `ID_Tercero` int NOT NULL AUTO_INCREMENT,
+  `Nombre` varchar(100) NOT NULL,
+  `Cedula` varchar(100) NOT NULL,
+  `Correo` varchar(100) NOT NULL,
+  `Direccion` varchar(100) NOT NULL,
+  `Contacto` varchar(100) NOT NULL,
+  `Estado` tinyint NOT NULL DEFAULT '1',
+  `Deuda_Total` decimal(10,2) DEFAULT '0.00',
+  PRIMARY KEY (`ID_Tercero`),
+  UNIQUE KEY `Cedula` (`Cedula`),
+  UNIQUE KEY `Correo` (`Correo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- 3. Tabla: especie
+CREATE TABLE `especie` (
+  `ID_Especie` int NOT NULL AUTO_INCREMENT,
+  `Tipo_Especie` varchar(50) NOT NULL,
+  PRIMARY KEY (`ID_Especie`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- 4. Tabla: medicamentos
+CREATE TABLE `medicamentos` (
+  `ID_Medicamentos` int NOT NULL AUTO_INCREMENT,
+  `Nombre` varchar(100) NOT NULL,
+  `Descripcion` text,
+  `Stock` int NOT NULL DEFAULT '50',
+  `Estado` tinyint NOT NULL DEFAULT '1',
+  PRIMARY KEY (`ID_Medicamentos`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- ====================================================================
+-- TABLAS DEPENDIENTES (Con llaves foráneas)
+-- ====================================================================
+ 
+-- 5. Tabla: terceros_rol
+CREATE TABLE `terceros_rol` (
+  `ID_Tercero` int NOT NULL,
+  `ID_Rol` int NOT NULL,
+  PRIMARY KEY (`ID_Tercero`,`ID_Rol`),
+  KEY `ID_Rol` (`ID_Rol`),
+  CONSTRAINT `terceros_rol_ibfk_1` FOREIGN KEY (`ID_Tercero`) REFERENCES `terceros` (`ID_Tercero`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `terceros_rol_ibfk_2` FOREIGN KEY (`ID_Rol`) REFERENCES `roles` (`ID_Rol`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- 6. Tabla: mascotas
+CREATE TABLE `mascotas` (
+  `ID_Mascotas` int NOT NULL AUTO_INCREMENT,
+  `ID_Tercero` int NOT NULL,
+  `ID_Especie` int NOT NULL,
+  `Nombre` varchar(100) NOT NULL,
+  PRIMARY KEY (`ID_Mascotas`),
+  KEY `ID_Tercero` (`ID_Tercero`),
+  KEY `ID_Especie` (`ID_Especie`),
+  CONSTRAINT `mascotas_ibfk_1` FOREIGN KEY (`ID_Tercero`) REFERENCES `terceros` (`ID_Tercero`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `mascotas_ibfk_2` FOREIGN KEY (`ID_Especie`) REFERENCES `especie` (`ID_Especie`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- 7. Tabla: consultas (Incluye Estado y Estado_Pago)
+CREATE TABLE `consultas` (
+  `ID_Consultas` int NOT NULL AUTO_INCREMENT,
+  `ID_Mascotas` int NOT NULL,
+  `ID_Veterinario` int NOT NULL,
+  `Fecha` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `Descripcion` varchar(200) DEFAULT NULL,
+  `Total` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `Estado` varchar(45) DEFAULT 'Pendiente',
+  `Estado_Pago` varchar(45) DEFAULT 'Pendiente',
+  PRIMARY KEY (`ID_Consultas`),
+  KEY `ID_Mascotas` (`ID_Mascotas`),
+  KEY `ID_Veterinario` (`ID_Veterinario`),
+  CONSTRAINT `consultas_ibfk_1` FOREIGN KEY (`ID_Mascotas`) REFERENCES `mascotas` (`ID_Mascotas`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `consultas_ibfk_2` FOREIGN KEY (`ID_Veterinario`) REFERENCES `terceros` (`ID_Tercero`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- 8. Tabla: consulta_detalle
+CREATE TABLE `consulta_detalle` (
+  `ID_Consulta_Detalle` int NOT NULL AUTO_INCREMENT,
+  `ID_Consulta` int NOT NULL,
+  `ID_Medicamento` int NOT NULL,
+  `Cantidad` int NOT NULL,
+  `Precio_Unitario` decimal(10,2) NOT NULL,
+  `Subtotal` decimal(10,2) NOT NULL,
+  PRIMARY KEY (`ID_Consulta_Detalle`),
+  KEY `ID_Consulta` (`ID_Consulta`),
+  KEY `ID_Medicamento` (`ID_Medicamento`),
+  CONSTRAINT `consulta_detalle_ibfk_1` FOREIGN KEY (`ID_Consulta`) REFERENCES `consultas` (`ID_Consultas`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `consulta_detalle_ibfk_2` FOREIGN KEY (`ID_Medicamento`) REFERENCES `medicamentos` (`ID_Medicamentos`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- 9. Tabla: compras
+CREATE TABLE `compras` (
+  `ID_Compra` int NOT NULL AUTO_INCREMENT,
+  `Numero_Factura` varchar(50) NOT NULL,
+  `Fecha` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ID_Tercero` int NOT NULL,
+  `Estado_Pago` enum('Pendiente','Pagado','Cancelado') NOT NULL DEFAULT 'Pendiente',
+  `Total` decimal(10,2) NOT NULL DEFAULT '0.00',
+  PRIMARY KEY (`ID_Compra`),
+  KEY `ID_Tercero` (`ID_Tercero`),
+  CONSTRAINT `compras_ibfk_1` FOREIGN KEY (`ID_Tercero`) REFERENCES `terceros` (`ID_Tercero`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- 10. Tabla: detalle_compras
+CREATE TABLE `detalle_compras` (
+  `ID_Detalle_Compra` int NOT NULL AUTO_INCREMENT,
+  `ID_Compra` int NOT NULL,
+  `ID_Medicamento` int NOT NULL,
+  `Cantidad` int NOT NULL,
+  `Precio_Compra` decimal(10,2) NOT NULL,
+  `Subtotal` decimal(10,2) NOT NULL,
+  PRIMARY KEY (`ID_Detalle_Compra`),
+  KEY `ID_Compra` (`ID_Compra`),
+  KEY `ID_Medicamento` (`ID_Medicamento`),
+  CONSTRAINT `detalle_compras_ibfk_1` FOREIGN KEY (`ID_Compra`) REFERENCES `compras` (`ID_Compra`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `detalle_compras_ibfk_2` FOREIGN KEY (`ID_Medicamento`) REFERENCES `medicamentos` (`ID_Medicamentos`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+ 
+-- ====================================================================
+-- TRIGGERS
+-- ====================================================================
+ 
+DELIMITER //
+ 
+-- Validar que la cita no se registre en el pasado
+CREATE TRIGGER `consultas_BEFORE_INSERT` BEFORE INSERT ON `consultas` FOR EACH ROW 
+BEGIN
+    IF DATE(NEW.Fecha) < CURDATE() THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error de Negocio: No se pueden registrar citas en fechas pasadas.';
+    END IF;
+END //
+ 
+-- Sumar a la deuda total del dueño al registrar un tratamiento
+CREATE TRIGGER `consulta_detalle_AFTER_INSERT` AFTER INSERT ON `consulta_detalle` FOR EACH ROW 
+BEGIN
+    DECLARE v_id_dueno INT;
+ 
+    SELECT m.ID_Tercero INTO v_id_dueno
+    FROM consultas c
+    INNER JOIN mascotas m ON c.ID_Mascotas = m.ID_Mascotas
+    WHERE c.ID_Consultas = NEW.ID_Consulta;
+ 
+    UPDATE terceros
+    SET Deuda_Total = Deuda_Total + NEW.Subtotal
+    WHERE ID_Tercero = v_id_dueno;
+END //
+ 
+-- ====================================================================
+-- PROCEDIMIENTOS ALMACENADOS
+-- ====================================================================
+ 
+-- 1. Aplicar descuento a vacuna
+CREATE PROCEDURE `aplicar_descuento_vacuna`(
+    INOUT p_precio_vacuna DECIMAL(10,2),
+    IN p_descuento_promo DECIMAL(5,2)
+)
+BEGIN
+    SET p_precio_vacuna = p_precio_vacuna - (p_precio_vacuna * (p_descuento_promo / 100));
+END //
+ 
+-- 2. Atender cita y actualizar diagnóstico
+CREATE PROCEDURE `atender_cita`(
+    IN p_id_cita INT,
+    IN p_diagnostico VARCHAR(200),
+    OUT p_estado_final VARCHAR(100)
+)
+BEGIN
+    DECLARE v_existe INT DEFAULT 0;
+   
+    SELECT COUNT(*) INTO v_existe 
+    FROM consultas 
+    WHERE ID_Consultas = p_id_cita;
+ 
+    IF v_existe > 0 THEN
+        UPDATE consultas 
+        SET Descripcion = p_diagnostico,
+            Estado = 'Atendido'
+        WHERE ID_Consultas = p_id_cita;
+        
+        SET p_estado_final = 'Operación exitosa: Cita actualizada y marcada como Atendida.';
+    ELSE
+        SET p_estado_final = 'Error: No se encontró una cita con el ID proporcionado.';
+    END IF;
+END //
+ 
+-- 3. Calcular deuda de cliente
+CREATE PROCEDURE `calcular_deuda_cliente`(
+    IN p_id_cliente INT, 
+    OUT p_total_deuda DECIMAL(10,2)
+)
+BEGIN
+    SELECT SUM(c.Total) INTO p_total_deuda
+    FROM consultas c
+    INNER JOIN mascotas m ON c.ID_Mascotas = m.ID_Mascotas
+    WHERE m.ID_Tercero = p_id_cliente 
+      AND c.Estado_Pago = 'Pendiente';
+ 
+    IF p_total_deuda IS NULL THEN
+        SET p_total_deuda = 0.00;
+    END IF;
+END //
+ 
+-- 4. Listar citas pendientes
+CREATE PROCEDURE `listar_citas_pendientes`()
+BEGIN
+    SELECT 
+        m.Nombre AS Nombre_Mascota, 
+        t.Nombre AS Nombre_Dueno, 
+        c.Fecha AS Fecha_Cita
+    FROM consultas c
+    INNER JOIN mascotas m ON c.ID_Mascotas = m.ID_Mascotas
+    INNER JOIN terceros t ON m.ID_Tercero = t.ID_Tercero
+    WHERE c.Estado = 'Pendiente';
+END //
+ 
+-- 5. Filtrar mascotas por especie
+CREATE PROCEDURE `mascotas_por_especie`(
+    IN p_especie VARCHAR(50)
+)
+BEGIN
+    SELECT 
+        m.Nombre AS Nombre_Mascota,
+        t.Nombre AS Nombre_Dueno,
+        e.Tipo_Especie
+    FROM mascotas m
+    INNER JOIN especie e ON m.ID_Especie = e.ID_Especie
+    INNER JOIN terceros t ON m.ID_Tercero = t.ID_Tercero
+    WHERE e.Tipo_Especie = p_especie;
+END //
+ 
+-- 6. Registrar nueva mascota
+CREATE PROCEDURE `registrar_nueva_mascota`(
+    IN p_nombre VARCHAR(100),
+    IN p_especie VARCHAR(50),
+    IN p_id_dueno INT
+)
+BEGIN
+    DECLARE v_id_especie INT;
+ 
+    SELECT ID_Especie INTO v_id_especie 
+    FROM especie 
+    WHERE Tipo_Especie = p_especie 
+    LIMIT 1;
+ 
+    IF v_id_especie IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: La especie indicada no se encuentra registrada.';
+    ELSE
+        INSERT INTO mascotas (ID_Tercero, ID_Especie, Nombre) 
+        VALUES (p_id_dueno, v_id_especie, p_nombre);
+    END IF;
+END //
+ 
+DELIMITER ;
