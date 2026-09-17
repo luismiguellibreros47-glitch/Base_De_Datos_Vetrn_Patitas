@@ -1,0 +1,64 @@
+DOCUMENTO TÉCNICO: PROCEDIMIENTOS Y TRIGGERS
+Base de Datos: veterinaria_patita
+Proyecto: Veterinaria Patitas
+
+INTRODUCCIÓN
+En una veterinaria el día a día es muy movido: entran pacientes, se recetan medicamentos, se cobran consultas y se programan citas. Para evitar descuidos humanos (como olvidar cobrar una medicina o agendar una cita en una fecha que ya pasó), la base de datos cuenta con dos tipos de herramientas
+• Triggers (Pilotos automáticos) Son vigilantes automáticos. Cuando pasa algo en el sistema (por ejemplo, guardar una cita o agregar un remedio), el trigger reacciona al instante sin que nadie tenga que activarlo a mano
+• Procedimientos Almacenados (Botones de acción) Son funciones ya preparadas. En vez de escribir consultas largas y difíciles, con una sola orden ejecutan tareas completas como atender a un paciente, calcular una cuenta o registrar una mascota
+
+PARTE 1: LOS TRIGGERS (DISPARADORES AUTOMÁTICOS)
+
+1. consultas_BEFORE_INSERT
+ Tabla que vigila consultas 
+ Momento en que actúa Justo antes de guardar una cita nueva en el sistema (BEFORE INSERT)
+ ¿Qué hace en cristiano? Es el vigilante del calendario. Compara la fecha de la cita con la fecha de hoy. Si alguien en recepción intenta registrar una cita para una fecha que ya pasó (ayer, la semana pasada, etc.), el sistema cancela la acción de inmediato y muestra el mensaje: 'Error de Negocio: No se pueden registrar citas en fechas pasadas.
+ ¿Para qué sirve? Evita errores de digitación y asegura que la agenda siempre esté al día y bien organizada hacia el futuro 
+
+2. consulta_detalle_AFTER_INSERT
+ Tabla que vigila consulta_detalle
+ Momento en que actúa Justo después de registrar un medicamento o servicio recetado a una consulta (AFTER INSERT)
+ ¿Qué hace en cristiano? Es el cajero automático. Cada vez que el veterinario le receta o aplica un medicamento a n animalito, este trigger rastrea automáticamente de quién es la mascota y le suma el valor de ese medicamento a la Deuda_Total del dueño en la tabla de terceros.
+ ¿Para qué sirve? Garantiza que ningún medicamento se quede sin cobrar. Todo lo que consume la mascota se suma directamente a la cuenta del cliente en tiempo real.
+
+PARTE 2: PROCEDIMIENTOS ALMACENADOS (ACCIONES DEL SISTEMA)
+
+1. registrar_nueva_mascota
+ Parámetros que recibe Nombre de la mascota, nombre de la especie en texto (por ejemplo 'Canino' o 'Felino') y el ID del dueño.
+ ¿Cómo funciona? Permite registrar una mascota sin necesidad de que el recepcionista tenga que saberse los códigos numéricos de las especies. Solo escribe 'Canino' o 'Felino', el procedimiento busca el código internamente y guarda a la mascota con su dueño. Si escriben una especie que no existe en la clínica, el procedimiento frena el registro y avisa que no se encuentra registrada 
+¿Para qué sirve? Registro de pacientes rápido, fácil y sin peligro de meter especies mal escritas o inexistentes.
+
+2. atender_cita
+ Parámetros ID de la cita, diagnóstico médico y entrega un mensaje de salida con el resultado 
+ ¿Cómo funciona? Es el cierre formal de la cita del médico. Revisa que la cita exista en el sistema, guarda las observaciones y diagnóstico en la descripción, y cambia el estado de la cita a 'Atendido'. Si la cita no existe, devuelve un mensaje avisando del error
+ ¿Para qué sirve? Deja constancia del diagnóstico del doctor y separa las citas pendientes de las que ya fueron atendidas.
+
+3. calcular_deuda_cliente
+Parámetros ID del cliente (dueño) y entrega como salida el valor total adeudado.: 
+¿Cómo funciona? La consulta rápida para caja. Revisa todas las mascotas que le pertenecen a ese cliente, suma el total de todas las consultas que sigan con pago 'Pendiente', y devuelve la suma exacta. Si el cliente está al día o no debe nada, entrega 0.00
+ ¿Para qué sirve? Agiliza el cobro en caja en un segundo sin tener que sumar facturas a mano ni usar calculadora 
+
+4. listar_citas_pendientes
+ Parámetros No necesita parámetros.: 
+¿Cómo funciona? Es la lista de la sala de espera. Hace una consulta y entrega una lista limpia únicamente con el nombre de la mascota, el nombre de su dueño y la fecha y hora de la cita, mostrando solamente las citas que aún están en estado 'Pendiente'
+ ¿Para qué sirve? Le permite a recepcionistas y doctores ver en pantalla quién está esperando su turno de atención sin datos de más.
+
+5. mascotas_por_especie
+ Parámetros Nombre de la especie (por ejemplo 'Felino' o 'Canino').
+¿Cómo funciona? Filtra a los pacientes registrados por su tipo de animal. Le indicas la especie y te entrega la lista de todas las mascotas de ese tipo junto al nombre de su dueño.
+ ¿Para qué sirve? Muy útil para campañas dirigidas, como por ejemplo una jornada de vacunación solo para gatos o desparasitación canina.
+
+6. aplicar_descuento_vacuna
+ Parámetros Precio actual de la vacuna y el porcentaje de descuento a aplicar (por ejemplo 10 o 15).
+ ¿Cómo funciona? Aplica una rebaja porcentual sobre el valor de la vacuna y actualiza directamente la variable con el precio final ya rebajado.
+ ¿Para qué sirve? Permite aplicar descuentos y promociones comerciales sin riesgo de que alguien se equivoque haciendo cuentas a mano.
+
+RESUMEN RÁPIDO
+ consultas_BEFORE_INSERT (Trigger) Bloquea el registro de citas en fechas pasadas.
+ consulta_detalle_AFTER_INSERT (Trigger) Suma automáticamente el costo de las medicinas a la deuda del dueño.
+ registrar_nueva_mascota (Procedimiento) Registra mascotas buscando la especie por su nombre común.
+ atender_cita (Procedimiento) Guarda el diagnóstico del veterinario y marca la cita como atendida.
+ calcular_deuda_cliente (Procedimiento) Calcula cuánto debe un cliente en total por consultas pendientes.
+ listar_citas_pendientes (Procedimiento) Muestra la lista de citas pendientes por atender.
+ mascotas_por_especie (Procedimiento) Filtra las mascotas según su especie para campañas o controles.
+ aplicar_descuento_vacuna (Procedimiento) Calcula el precio final de una vacuna aplicando un descuento.
